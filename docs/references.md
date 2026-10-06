@@ -8,3 +8,6 @@ In this file, a collection of links and references can be found.
 * Documentation of the GOES satellites ABI. Page 3 for channels and corresponding wavelengths.  
   https://www.ncei.noaa.gov/sites/default/files/2021-08/GOES-16_ABI-L1b-CMI_Full-Validation_ProductPerformanceGuide_v2.pdf
   https://www.ncei.noaa.gov/sites/default/files/2024-02/G18_ABI_L1b-CMI_FullValidation_ProductPerformanceGuide_Publish.pdf
+
+* Fine tuning LightningCast for Brazil.
+  https://www.researchgate.net/publication/403232240_Fine-Tuning_Lightning_Nowcasting_for_a_New_Domain
