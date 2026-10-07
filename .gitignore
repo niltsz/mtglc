@@ -20,3 +20,4 @@ mlruns/
 *.tar.gz
 *.tar.xz
 *.zip
+*ipynb
