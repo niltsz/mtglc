@@ -1,10 +1,14 @@
 import io
+import re
+from contextlib import nullcontext as does_not_raise
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
 
 from mtglc import eumetsat
+
+TESTTIME = datetime(2025, 7, 1, 14, 0, tzinfo=UTC)
 
 
 class DummyCollection:
@@ -142,3 +146,115 @@ def test_get_datastore_missing_credentials(monkeypatch, tmp_path, dummy_eumdac):
 
     with pytest.raises(RuntimeError, match="No EUMDAC credentials found"):
         _ = eumetsat.get_datastore()
+
+
+def test_get_product_dir(tmp_path):
+    dt = datetime(2025, 7, 1, 14, 7, tzinfo=UTC)
+    product_name = "fci_fdhsi"
+    expected_path = tmp_path / product_name / "20250701" / "1400"
+    assert eumetsat.get_product_dir(tmp_path, product_name, dt) == expected_path
+
+
+def test_chunk_number_from_filename(tmp_path):
+    filename1 = str(tmp_path / body_name(1234))
+    filename2 = str(tmp_path / (body_name(1234) + "a"))
+    filename3 = str(tmp_path / body_name(1234).replace("1234.nc", "123.nc"))
+    filename4 = str(tmp_path / body_name(4))
+
+    assert eumetsat.chunk_number_from_filename(filename1) == 1234
+    with pytest.raises(ValueError, match="Chunk number could not be determined"):
+        eumetsat.chunk_number_from_filename(filename2)
+    with pytest.raises(ValueError, match="Chunk number could not be determined"):
+        eumetsat.chunk_number_from_filename(filename3)
+    assert eumetsat.chunk_number_from_filename(filename4) == 4
+
+
+def test_chunk_completeness():
+    filename1 = body_name(1234)
+    filename2 = body_name(4)
+    filename3 = body_name(1235)
+    filename4 = body_name(1234)
+    assert (
+        eumetsat.check_chunk_completeness(
+            [filename1, filename2, filename3], [1234, 4, 1235]
+        )
+        is None
+    )
+    with pytest.raises(ValueError, match=re.escape("extra {4}")):
+        eumetsat.check_chunk_completeness(
+            [filename1, filename2, filename3], [1234, 1235]
+        )
+    with pytest.raises(ValueError, match=re.escape("duplicates {1234}")):
+        eumetsat.check_chunk_completeness(
+            [filename1, filename3, filename4], [1234, 1235]
+        )
+    with pytest.raises(ValueError, match=re.escape("Missing {1235}")):
+        eumetsat.check_chunk_completeness([filename1, filename2], [1234, 1235])
+
+
+@pytest.mark.parametrize(
+    ("found_channels", "expected_channels", "outcome"),
+    [
+        (
+            ["ir_105", "nir_13", "vis_04", "vis_06"],
+            ["ir_105", "nir_13", "vis_04", "vis_06"],
+            does_not_raise(),
+        ),
+        (
+            ["ir_105", "nir_13", "vis_04", "vis_06"],
+            ["ir_105", "nir_13", "vis_06", "vis_04"],
+            does_not_raise(),
+        ),
+        (
+            ["ir_105", "nir_13", "vis_04"],
+            ["ir_105", "nir_13", "vis_04", "vis_06"],
+            pytest.raises(ValueError, match=re.escape("Missing channels {'vis_06'}")),
+        ),
+    ],
+)
+def test_check_channel_completeness(found_channels, expected_channels, outcome):
+    with outcome:
+        eumetsat.check_channel_completeness(found_channels, expected_channels)
+
+
+def test_get_product_filelist(tmp_path):
+    make_product_dir(tmp_path)
+    filelist = eumetsat.get_product_filelist(
+        tmp_path / "fci_fdhsi" / "20250701" / "1400"
+    )
+    assert [eumetsat.chunk_number_from_filename(f.name) for f in filelist] == [
+        3,
+        17,
+        40,
+    ]
+
+
+def body_name(n: int) -> str:
+    return f"W_XX-EUMETSAT-Darmstadt,IMG+SAT,MTI1+FCI-1C-RRAD-FDHSI-FD--CHK-BODY---NC4E_C_EUMT_20250718141512_IDPFI_OPE_20250718140007_20250718140924_N__O_0085_{n:04d}.nc"
+
+
+def make_product_dir(tmp_path):
+    folder = tmp_path / "fci_fdhsi" / "20250701" / "1400"
+    folder.mkdir(parents=True)
+    for n in (40, 3, 17):
+        (folder / body_name(n)).touch()
+    (folder / body_name(41).replace("CHK-BODY", "CHK-TRAIL")).touch()
+    (folder / body_name(5).replace(".nc", ".part")).touch()
+    (folder / "manifest.xml").touch()
+    (folder / "quicklook.png").touch()
+    return folder
+
+
+def test_select_chunk(tmp_path):
+    folder = make_product_dir(tmp_path)
+    filelist = eumetsat.get_product_filelist(folder)
+    kept_chunks = eumetsat.select_chunk(filelist, [17, 40])
+    assert [eumetsat.chunk_number_from_filename(str(f)) for f in kept_chunks] == [
+        17,
+        40,
+    ]
+    with pytest.raises(ValueError, match=re.escape("Missing {18}")):
+        eumetsat.select_chunk(filelist, [18, 40])
+    long_filelist = filelist + filelist
+    with pytest.raises(ValueError, match=re.escape("duplicate [17, 40]")):
+        eumetsat.select_chunk(long_filelist, [17, 40])
