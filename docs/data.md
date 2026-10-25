@@ -15,3 +15,8 @@
 
 * Target for LightningCast: **LI Accumulated Flash Area - MTG - 0 degree**.
   EUMDAC identifier: **EO:EUM:DAT:0687**
+
+
+
+## fci.py
+* get_scene has hardcoded orientation of upper_right_corner = "NE". Test cases written and pass for "NE", for any other orientation the tests turn red. 

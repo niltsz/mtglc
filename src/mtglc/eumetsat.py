@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -7,6 +8,7 @@ import eumdac
 
 CREDENTIALS_PATH = Path.home() / ".eumdac" / "credentials"
 COLLECTION_NAMES = {"fci_fdhsi": "EO:EUM:DAT:0662", "li_afa": "EO:EUM:DAT:0687"}
+REGEX_PATTERN = re.compile(r"_(\d{4})\.nc$")
 
 
 def as_utc(dt: datetime):
@@ -141,10 +143,71 @@ def download(
     products = get_products(datastore, identifier, starttime, endtime)
     for p in products:
         timeslot = get_timeslot(as_utc(p.sensing_start))
-        target_path = (
-            target_dir
-            / collectionname
-            / timeslot.strftime("%Y%m%d")
-            / timeslot.strftime("%H%M")
-        )
+        target_path = get_product_dir(target_dir, collectionname, timeslot)
         download_bodies(p, target_path, body_numbers)
+
+
+def get_product_dir(data_dir: Path, collection_name: str, dt: datetime) -> Path:
+    timeslot = get_timeslot(as_utc(dt))
+    target_path = (
+        data_dir
+        / collection_name
+        / timeslot.strftime("%Y%m%d")
+        / timeslot.strftime("%H%M")
+    )
+    return target_path
+
+
+def chunk_number_from_filename(filename: str, pattern=REGEX_PATTERN) -> int:
+    match = pattern.search(filename)
+    if match is None:
+        raise ValueError(f"Chunk number could not be determined from file {filename}")
+    return int(match.group(1))
+
+
+def check_chunk_completeness(filenames: list[Path], expected_chunks: list[int]) -> None:
+    found_chunks = [chunk_number_from_filename(f) for f in filenames]
+    expected_chunks = set(expected_chunks)
+    missing = expected_chunks - set(found_chunks)
+    extra = set(found_chunks) - expected_chunks
+    duplicates = {x for x in found_chunks if found_chunks.count(x) > 1}
+
+    if missing or extra or duplicates:
+        raise ValueError(
+            f"Mismatch in expected and found chunks. Missing {missing}, extra {extra}, duplicates {duplicates}"
+        )
+
+
+def check_channel_completeness(
+    found_channels: list[str], expected_channels: list[str]
+) -> None:
+    expected_channels = set(expected_channels)
+    missing_channels = expected_channels - set(found_channels)
+
+    if missing_channels:
+        raise ValueError(
+            f"Mismatch in found channels. Missing channels {missing_channels}"
+        )
+
+
+def get_product_filelist(path) -> list[Path]:
+    if not path.is_dir():
+        raise FileNotFoundError(f"Product folder not found: {path}")
+    filelist = sorted([f for f in path.glob("*.nc") if "CHK-BODY" in f.name])
+    return filelist
+
+
+def select_chunk(filelist: list[Path], chunks: list[int]) -> list[Path]:
+    chunk_dict = {}
+    for f in filelist:
+        c = chunk_number_from_filename(str(f))
+        if c not in chunk_dict:
+            chunk_dict[c] = []
+        chunk_dict[c].append(f)
+    missing_chunks = set(chunks) - chunk_dict.keys()
+    duplicate_chunks = [k for k in chunk_dict if len(chunk_dict[k]) > 1 and k in chunks]
+    if missing_chunks or duplicate_chunks:
+        raise ValueError(
+            f"Chunk mismatch. Missing {missing_chunks}, duplicate {duplicate_chunks}"
+        )
+    return [chunk_dict[c][0] for c in chunk_dict if c in chunks]

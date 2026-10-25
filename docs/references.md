@@ -11,3 +11,6 @@ In this file, a collection of links and references can be found.
 
 * Fine tuning LightningCast for Brazil.
   https://www.researchgate.net/publication/403232240_Fine-Tuning_Lightning_Nowcasting_for_a_New_Domain
+
+
+* Lightningcast 1.0 beta2 is used for this study

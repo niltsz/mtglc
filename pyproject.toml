@@ -11,7 +11,7 @@ dependencies = [
     "eumdac>=3.1.1",
     "matplotlib>=3.11.2",
     "netcdf4>=1.7.4",
-    "satpy>=0.60.0",
+    "satpy>=0.60,<1.0",
 ]
 
 [build-system]
