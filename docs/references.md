@@ -13,5 +13,4 @@ In this file, a collection of links and references can be found.
   https://www.researchgate.net/publication/403232240_Fine-Tuning_Lightning_Nowcasting_for_a_New_Domain
 
 
-* LightningCast Git Repo, specifically the "feature-mtg-support" branch with comit "better support for mtg" from Sep 10, 2025. Hash 029845edc3c10b3aed01eb511449ac6c531b6b42   
-
+* Lightningcast 1.0 beta2 is used for this study

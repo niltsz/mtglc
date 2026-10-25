@@ -21,3 +21,10 @@ Use MTG LI Accumulated Flash Area as target for ML. Time Window [t0, t0 + 60 min
 For the start time of the labels (LI), the start time + 10 min of the scan cycle in which europe is fully scanned is used (example: europe is fully scanned at 14:07:45. The label will then be [14:10 : 15:10). This ensures that no flashes will be recorded before europe is scanned. For the example day 01.07.2025 14:00, the full disk was scanned from 14:00:07 until 14:09:34.
 Note: CIMSS LightningCast uses the same dt for both the FCI scene and the LI window, derived from the trailer file name. Bc Europe is scanned at the end of the cycle, this means that the label starts several minutes before the actual scan.  
 The orientation of FCI will be flipped by satpy, with the defautl argument upper_right_corner = "NE". Test cases written, test passes for "NE" and turns red for "NW", "SE" and "NW". 
+
+## 2026-10-15
+Train on region -10...30 E, 35 ... 60 N. Pragmatic choice: includes most of Europe without extending too far north, has to work with limited hardware ressources.
+For pixels on the 2x2km, this corresponds to the rows from 276 to 1064, and to the columns 2344 to 4024 (rounded so that the number can be divided by 4 for the encoder). For 1x1km and 0.5x0.5km resolution, the pixels are doubled and quadrupled, respectively.
+
+## 2026-10-16
+Change the rows to 280 to 1064. Reason: chunk 38 has row numbers 279 to 417, meaning that with 276 one more full chunk would have to be loaded just for three rows.
