@@ -46,3 +46,15 @@ def test_real_scene_northup_westleft(real_scene, channel):
     assert np.isfinite([lat_top, lat_bottom, lon_left, lon_right]).all()
     assert lat_top > lat_bottom
     assert lon_left < lon_right
+
+
+def test_window_divisible():
+    with pytest.raises(ValueError, match="divided"):
+        fci.Window(1, 4, 0, 8)
+
+
+def test_window_invalid():
+    with pytest.raises(ValueError, match="Invalid"):
+        fci.Window(12, 4, 0, 8)
+    with pytest.raises(ValueError, match="Invalid"):
+        fci.Window(0, 4, 20, 8)
