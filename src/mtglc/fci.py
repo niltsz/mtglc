@@ -42,7 +42,7 @@ class Window:
         return (h, w)
 
 
-EUROPE_WINDOW = Window(280, 1064, 2344, 4024)
+EUROPE_WINDOW = Window(376, 1064, 2344, 4024)
 EUROPE_CHUNKS = [33, 34, 35, 36, 37, 38]
 
 
