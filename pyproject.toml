@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Nils Brast", email = "nilsbrast@science-node.de" }
 ]
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "eumdac>=3.1.1",
